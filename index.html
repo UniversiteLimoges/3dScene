@@ -64,14 +64,13 @@
             // Get the DOM element to attach to
             const container = document.querySelector('#container');
 
+            // document.body.appendChild(renderer.domElement);
+
             // Create a WebGL renderer and starts it
             renderer = new THREE.WebGLRenderer();
             renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-
-            // Attach the renderer-supplied DOM element.
+            // Attach 1the renderer-supplied DOM element.
             container.appendChild(renderer.domElement);
-            // document.body.appendChild(renderer.domElement);
-
             // Scene
             scene = new THREE.Scene();
             // fog must be added to scene before first render
@@ -107,14 +106,14 @@
             // Ground
             // window.addEventListener('keydown', KeyDown);
             // window.addEventListener('keyup', KeyUp);
-            //https://www.youtube.com/watch?v=UUilwGxIj_Q
-            //https://makc3d.wordpress.com/2014/07/20/thre
+            // https://www.youtube.com/watch?v=UUilwGxIj_Q
+            // https://makc3d.wordpress.com/2014/07/20/thre
             // https://free3d.com/fr/3d-models/ville
             // https://www.youtube.com/watch?v=6oFvqLfRnsU
             // https://blog.webmaestro.fr/character-controls-three-js/
             meshFloorTexture = new THREE.TextureLoader().load('./textures/floor.jpg');
             meshFloorTexture.wrapS = meshFloorTexture.wrapT = THREE.RepeatWrapping;
-            meshFloorTexture.repeat.set(1, 1);
+            meshFloorTexture.repeat.set(10, 10);
             meshFloor = new THREE.Mesh(
                 new THREE.PlaneGeometry(1000, 1000, 10, 10), // x, y ,nb segmentsX
                 new THREE.MeshBasicMaterial({
@@ -124,26 +123,26 @@
                     // wireframe: true
                 })
             );
-            meshFloor.material.side = THREE.DoubleSide;
             meshFloor.position.set(0, -0.5, 0);
             meshFloor.rotation.x = Math.PI / 2;
             scene.add(meshFloor);
 
+            // Cube
             cube = new THREE.Mesh(
                 new THREE.BoxGeometry(50, 50, 50),
                 new THREE.MeshBasicMaterial({
                     color: 0xffffff,
-                    wireframe: false // if we want to see the squeletton
+                    wireframe: true // if we want to see the squeletton
                 })
             );
             cube.lenght = 50;
-            cube.position.set(0, 0, -cube.lenght / 2);
-            meshFloor.add(cube);
+            cube.position.set(0, cube.lenght / 2, 0);
+            scene.add(cube);
 
             // Sky
             var skyBoxGeometry = new THREE.CubeGeometry(FAR - 10, FAR - 10, FAR - 10);
             var skyBoxMaterial = new THREE.MeshBasicMaterial({
-                color: 0x9999ff,
+                color: 0x9966ff,
                 side: THREE.BackSide
             });
             var skyBox = new THREE.Mesh(skyBoxGeometry, skyBoxMaterial);
@@ -152,81 +151,86 @@
             // 75°, ratio of browser, ,distance
             //https://miro.medium.com/max/1400/1*HLlvkSfd4esYDN8BtNwGCQ.png
             camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-            camera.position.set(cube.position.x, cube.position.y + 100, cube.position.z + cube.lenght / 2)
+            // camera.position.set(scene.position.x, scene.position.y + 100, scene.position.z + cube.lenght / 2)
+            camera.position.set(0, 0, 500)
             // camera.lookAt(scene.position);
-            // camera.lookAt(0,0,100);
-            scene.add(camera);
-            // scene.add(cube);
+            camera.lookAt(cube.position);
+            cube.add(camera);
 
-             // Controls scence
-            // const orbitControl = new THREE.OrbitControls(camera, renderer.domElement);
+            // Controls scence
+            const orbitControl = new THREE.OrbitControls(camera, renderer.domElement);
             // const pointerLockControl = new THREE.PointerLockControls( camera, document.body );
             // pointerLockControl = new THREE.PointerLockControls( camera, renderer.domElement );
-            pointerLockControl = new THREE.PointerLockControls( camera, document.body );
-            scene.add( pointerLockControl.getObject() );
-            var onKeyDown = function ( event ) {
+            // pointerLockControl = new THREE.PointerLockControls(camera, document.body);
+            // pointerLockControl.getObject().position.z = 100;
+            // pointerLockControl.getObject().position.y = 0;
+            // instructions.addEventListener('click', function () {
+            //         pointerLockControl.lock();
+            // , false); 
 
-switch ( event.keyCode ) {
+            // scene.add(pointerLockControl.getObject());
+            // console.log(camera.position);
 
-    case 38: // up
-    case 87: // w
-        moveForward = true;
-        break;
+            // var onKeyDown = function (event) {
+            //     switch (event.keyCode) {
+            //         case 38: // up
+            //         case 90: // w
+            //             moveForward = true;
+            //             break;
 
-    case 37: // left
-    case 65: // a
-        moveLeft = true;
-        break;
+            //         case 37: // left
+            //         case 81: // q
+            //             moveLeft = true;
+            //             break;
 
-    case 40: // down
-    case 83: // s
-        moveBackward = true;
-        break;
+            //         case 40: // down
+            //         case 83: // s
+            //             moveBackward = true;
+            //             break;
 
-    case 39: // right
-    case 68: // d
-        moveRight = true;
-        break;
+            //         case 39: // right
+            //         case 68: // d
+            //             moveRight = true;
+            //             break;
 
-    case 32: // space
-        if ( canJump === true ) velocity.y += 350;
-        canJump = false;
-        break;
+            //         case 32: // space
+            //             if (canJump === true) velocity.y += 350;
+            //             canJump = false;
+            //             break;
+            //     }
 
-}
+            // };
 
-};
+            // var onKeyUp = function (event) {
 
-var onKeyUp = function ( event ) {
+            //     switch (event.keyCode) {
 
-switch ( event.keyCode ) {
+            //         case 38: // up
+            //         case 90: // z
+            //             moveForward = false;
+            //             break;
 
-    case 38: // up
-    case 87: // w
-        moveForward = false;
-        break;
+            //         case 37: // left
+            //         case 81: // q
+            //             moveLeft = false;
+            //             break;
 
-    case 37: // left
-    case 65: // a
-        moveLeft = false;
-        break;
+            //         case 40: // down
+            //         case 83: // s
+            //             moveBackward = false;
+            //             break;
 
-    case 40: // down
-    case 83: // s
-        moveBackward = false;
-        break;
+            //         case 39: // right
+            //         case 68: // d
+            //             moveRight = false;
+            //             break;
 
-    case 39: // right
-    case 68: // d
-        moveRight = false;
-        break;
+            //     }
 
-}
+            // };
 
-};
-
-document.addEventListener( 'keydown', onKeyDown, false );
-document.addEventListener( 'keyup', onKeyUp, false );
+            // document.addEventListener('keydown', onKeyDown, false); document.addEventListener('keyup',
+            //     onKeyUp, false);
 
             // firstPersonControl = new THREE.FirstPersonControls(camera, renderer.domElement);
             // firstPersonControl.movementSpeed = 1000;
@@ -278,7 +282,8 @@ document.addEventListener( 'keyup', onKeyUp, false );
         let update = function () {
             // cube.rotation.x += .01;
             // cube.rotation.y += .03;
-            // cube.position.x += 1;
+
+            // cube.position.z += 1;
 
             // camera.position.x += 1
             // camera.position.y += 1
@@ -289,6 +294,11 @@ document.addEventListener( 'keyup', onKeyUp, false );
             // meshFloor.position.z += 1;
 
             // controls.update();
+
+            // if (pointerLockControl.isLocked === true) {
+            //     console.log("heil")
+            // }
+
             stats.update();
             // firstPersonControl.update(clock.getDelta());
             // pointerLockControl.update(clock.getDelta());
