@@ -1,0 +1,341 @@
+<!doctype html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="author" content="Paul Lewis" />
+    <meta name="viewport" content="width=device-width">
+    <title></title>
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+            background: #777;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Principal -->
+    <script src="./third_party/build/three.js"></script>
+    <!-- Loaders -->
+    <!-- <script src="./third_party/loaders/ColladaLoader.js"></script> -->
+    <!-- Controls -->
+    <script src="./third_party/OrbitControls.js"></script>
+    <script src="./third_party/FirstPersonControls.js"></script>
+    <script src="https://threejs.org/examples/js/controls/PointerLockControls.js"></script>
+    <script src="./third_party/libs/stats.min.js"></script>
+    <div id="container"></div>
+
+    <script>
+        // import { PointerLockControls } from './third_party/PointerLockControls.js';
+
+        let camera, scene, renderer;
+        let clock = new THREE.Clock();
+
+        // https://blog.cogapp.com/how-to-create-a-virtual-3d-gallery-using-iiif-and-three-js-ad6766e45d3f
+        let firstPersonControl, pointerLockControl;
+
+        // Resize the renderer and the camera if we resize the window
+        window.addEventListener('resize', function () {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            // firstPersonControl.handleResize();
+        });
+
+        // view-source:https://threejs.org/examples/webgl_geometry_minecraft.html
+
+        // function createSphere(arc, tube, radial_segment, tubular_segment, material) {
+        const load = function () {
+            // Set the scene size.
+            const SCREEN_WIDTH = window.innerWidth;
+            const SCREEN_HEIGHT = window.innerHeight;
+
+            // Set some camera attributes.
+            const VIEW_ANGLE = 45;
+            const ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
+            const NEAR = .1;
+            const FAR = 10000;
+
+            // Get the DOM element to attach to
+            const container = document.querySelector('#container');
+
+            // Create a WebGL renderer and starts it
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+
+            // Attach the renderer-supplied DOM element.
+            container.appendChild(renderer.domElement);
+            // document.body.appendChild(renderer.domElement);
+
+            // Scene
+            scene = new THREE.Scene();
+            // fog must be added to scene before first render
+            scene.fog = new THREE.FogExp2(0x9999ff, 0.00025);
+            // scene.fog = new THREE.Fog(scene.background, 10, 20);
+            // scene.background = new THREE.Color(0x01374c);
+
+            // var light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.75 );
+            // light.position.set( 0.5, 1, 0.75 );
+            // scene.add( light );
+
+            // Point de lumière
+            // const pointLight = new THREE.PointLight(0xFFFFFF);
+            // pointLight.position.x = 10;
+            // pointLight.position.y = 50;
+            // pointLight.position.z = 130;
+            // scene.add(pointLight);
+
+            // Lumière ambiante
+            // const ambientLight = new THREE.AmbientLight(0xcccccc, 0.4);
+            // scene.add(ambientLight);
+
+            // Lumière directionnelle
+            // const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            // directionalLight.position.set(1, -1, 0).normalize();
+            // scene.add(directionalLight);
+
+            // collada
+            // const loadingManager = new THREE.LoadingManager(function () {});
+            // const colladaLoader = new THREE.ColladaLoader(loadingManager);
+            // colladaLoader.load('./models/pion/model.dae', function (collada) {});
+
+            // Ground
+            // window.addEventListener('keydown', KeyDown);
+            // window.addEventListener('keyup', KeyUp);
+            //https://www.youtube.com/watch?v=UUilwGxIj_Q
+            //https://makc3d.wordpress.com/2014/07/20/thre
+            // https://free3d.com/fr/3d-models/ville
+            // https://www.youtube.com/watch?v=6oFvqLfRnsU
+            // https://blog.webmaestro.fr/character-controls-three-js/
+            meshFloorTexture = new THREE.TextureLoader().load('./textures/floor.jpg');
+            meshFloorTexture.wrapS = meshFloorTexture.wrapT = THREE.RepeatWrapping;
+            meshFloorTexture.repeat.set(1, 1);
+            meshFloor = new THREE.Mesh(
+                new THREE.PlaneGeometry(1000, 1000, 10, 10), // x, y ,nb segmentsX
+                new THREE.MeshBasicMaterial({
+                    map: meshFloorTexture,
+                    side: THREE.DoubleSide
+                    // color: 0x77cc00,
+                    // wireframe: true
+                })
+            );
+            meshFloor.material.side = THREE.DoubleSide;
+            meshFloor.position.set(0, -0.5, 0);
+            meshFloor.rotation.x = Math.PI / 2;
+            scene.add(meshFloor);
+
+            cube = new THREE.Mesh(
+                new THREE.BoxGeometry(50, 50, 50),
+                new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    wireframe: false // if we want to see the squeletton
+                })
+            );
+            cube.lenght = 50;
+            cube.position.set(0, 0, -cube.lenght / 2);
+            meshFloor.add(cube);
+
+            // Sky
+            var skyBoxGeometry = new THREE.CubeGeometry(FAR - 10, FAR - 10, FAR - 10);
+            var skyBoxMaterial = new THREE.MeshBasicMaterial({
+                color: 0x9999ff,
+                side: THREE.BackSide
+            });
+            var skyBox = new THREE.Mesh(skyBoxGeometry, skyBoxMaterial);
+            scene.add(skyBox);
+
+            // 75°, ratio of browser, ,distance
+            //https://miro.medium.com/max/1400/1*HLlvkSfd4esYDN8BtNwGCQ.png
+            camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+            camera.position.set(cube.position.x, cube.position.y + 100, cube.position.z + cube.lenght / 2)
+            // camera.lookAt(scene.position);
+            // camera.lookAt(0,0,100);
+            scene.add(camera);
+            // scene.add(cube);
+
+             // Controls scence
+            // const orbitControl = new THREE.OrbitControls(camera, renderer.domElement);
+            // const pointerLockControl = new THREE.PointerLockControls( camera, document.body );
+            // pointerLockControl = new THREE.PointerLockControls( camera, renderer.domElement );
+            pointerLockControl = new THREE.PointerLockControls( camera, document.body );
+            scene.add( pointerLockControl.getObject() );
+            var onKeyDown = function ( event ) {
+
+switch ( event.keyCode ) {
+
+    case 38: // up
+    case 87: // w
+        moveForward = true;
+        break;
+
+    case 37: // left
+    case 65: // a
+        moveLeft = true;
+        break;
+
+    case 40: // down
+    case 83: // s
+        moveBackward = true;
+        break;
+
+    case 39: // right
+    case 68: // d
+        moveRight = true;
+        break;
+
+    case 32: // space
+        if ( canJump === true ) velocity.y += 350;
+        canJump = false;
+        break;
+
+}
+
+};
+
+var onKeyUp = function ( event ) {
+
+switch ( event.keyCode ) {
+
+    case 38: // up
+    case 87: // w
+        moveForward = false;
+        break;
+
+    case 37: // left
+    case 65: // a
+        moveLeft = false;
+        break;
+
+    case 40: // down
+    case 83: // s
+        moveBackward = false;
+        break;
+
+    case 39: // right
+    case 68: // d
+        moveRight = false;
+        break;
+
+}
+
+};
+
+document.addEventListener( 'keydown', onKeyDown, false );
+document.addEventListener( 'keyup', onKeyUp, false );
+
+            // firstPersonControl = new THREE.FirstPersonControls(camera, renderer.domElement);
+            // firstPersonControl.movementSpeed = 1000;
+            // firstPersonControl.lookSpeed = 0.125;
+            // firstPersonControl.lookVertical = false;
+
+            // var cubeMaterialArray = [];
+            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+            //     color: 0xff3333
+            // }));
+            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+            //     color: 0xff8800
+            // }));
+            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+            //     color: 0xffff33
+            // }));
+            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+            //     color: 0x33ff33
+            // }));
+            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+            //     color: 0x3333ff
+            // }));
+            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+            //     color: 0x8833ff
+            // }));
+            // var cubeMaterials = new THREE.MeshFaceMaterial(cubeMaterialArray);
+            // var cubeGeometry = new THREE.CubeGeometry(100, 100, 100, 1, 1, 1);
+            // cubeComplexe = new THREE.Mesh(cubeGeometry, cubeMaterials);
+            // cubeComplexe.position.set(-100, 50, -50);
+            // scene.add(cubeComplexe);
+
+            // Help axes
+            var axes = new THREE.AxesHelper(1000);
+            scene.add(axes);
+
+            // Stats
+            stats = new Stats();
+            // stats.domElement.style.position = 'absolute';
+            // stats.domElement.style.bottom = '0px';
+            // stats.domElement.style.zIndex = 100;
+            container.appendChild(stats.domElement);
+
+            var onKeyUp = function (event) {
+                console.log(event);
+            }
+        }
+
+        // Game Logic
+        let update = function () {
+            // cube.rotation.x += .01;
+            // cube.rotation.y += .03;
+            // cube.position.x += 1;
+
+            // camera.position.x += 1
+            // camera.position.y += 1
+            // camera.position.z -= 1
+
+            // meshFloor.position.x += 1;
+            // meshFloor.position.y += 1;
+            // meshFloor.position.z += 1;
+
+            // controls.update();
+            stats.update();
+            // firstPersonControl.update(clock.getDelta());
+            // pointerLockControl.update(clock.getDelta());
+        }
+
+        // Run game loop(update, render, repeat)
+        const gameLoop = function () {
+            requestAnimationFrame(gameLoop);
+            update();
+
+            // Render scene
+            renderer.render(scene, camera);
+        }
+
+        load();
+        gameLoop();
+
+        // Axes to help up
+        function helpAxes() {
+            // let axesHelper1 = new THREE.AxesHelper(50);
+            // let axesHelper2 = new THREE.AxesHelper(50);
+            // let axesHelper3 = new THREE.AxesHelper(50);
+
+            // scene.add(axesHelper1);
+            // sphere.add(axesHelper1);
+            // obj3d.add(axesHelper2);
+            // pion.add(axesHelper3);
+        }
+
+        function createForme(form, material) {
+            // Create a new mesh with sphere geometry
+            const forme = new THREE.Mesh(form, material);
+            forme.angle = Math.random(0, 360);
+
+            // Reset of angles
+            if (forme.angle > 360) {
+                forme.angle = 1;
+            } else if (forme.angle < 1) {
+                forme.angle = 360;
+            }
+
+            return forme;
+        }
+
+        // Schedule the first frame.
+        requestAnimationFrame(update);
+    </script>
+</body>
+
+</html>
