@@ -13,10 +13,46 @@
             background: #777;
             overflow: hidden;
         }
+
+        #blocker {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        #instructions {
+            width: 100%;
+            height: 100%;
+
+            display: box;
+            box-orient: horizontal;
+            box-pack: center;
+            box-align: center;
+
+            color: #ffffff;
+            text-align: center;
+            font-family: Arial;
+            font-size: 14px;
+            line-height: 24px;
+
+            cursor: pointer;
+        }
     </style>
 </head>
 
 <body>
+    <div id="blocker">
+        <div id="instructions">
+            <span style="font-size:36px">Click to play</span>
+            <br /><br />
+            Move: WASD<br />
+            Jump: SPACE<br />
+            Look: MOUSE
+        </div>
+    </div>
+    <div id="container"></div>
+
     <!-- Principal -->
     <script src="./third_party/build/three.js"></script>
     <!-- Loaders -->
@@ -24,9 +60,8 @@
     <!-- Controls -->
     <script src="./third_party/OrbitControls.js"></script>
     <script src="./third_party/FirstPersonControls.js"></script>
-    <script src="https://threejs.org/examples/js/controls/PointerLockControls.js"></script>
+    <script src="./third_party/PointerLockControls.js"></script>
     <script src="./third_party/libs/stats.min.js"></script>
-    <div id="container"></div>
 
     <script>
         // import { PointerLockControls } from './third_party/PointerLockControls.js';
@@ -43,8 +78,6 @@
 
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
-
-            // firstPersonControl.handleResize();
         });
 
         // view-source:https://threejs.org/examples/webgl_geometry_minecraft.html
@@ -63,22 +96,19 @@
 
             // Get the DOM element to attach to
             const container = document.querySelector('#container');
-
-            // document.body.appendChild(renderer.domElement);
-
             // Create a WebGL renderer and starts it
             renderer = new THREE.WebGLRenderer();
             renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
             // Attach 1the renderer-supplied DOM element.
             container.appendChild(renderer.domElement);
+
             // Scene
             scene = new THREE.Scene();
-            // fog must be added to scene before first render
-            scene.fog = new THREE.FogExp2(0x9999ff, 0.00025);
-            // scene.fog = new THREE.Fog(scene.background, 10, 20);
             // scene.background = new THREE.Color(0x01374c);
+            // scene.fog = new THREE.FogExp2(0x9999ff, 0.00025);
+            // scene.fog = new THREE.Fog(scene.background, 10, 20);
 
-            // var light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.75 );
+            // const light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.75 );
             // light.position.set( 0.5, 1, 0.75 );
             // scene.add( light );
 
@@ -111,21 +141,60 @@
             // https://free3d.com/fr/3d-models/ville
             // https://www.youtube.com/watch?v=6oFvqLfRnsU
             // https://blog.webmaestro.fr/character-controls-three-js/
-            meshFloorTexture = new THREE.TextureLoader().load('./textures/floor.jpg');
-            meshFloorTexture.wrapS = meshFloorTexture.wrapT = THREE.RepeatWrapping;
-            meshFloorTexture.repeat.set(10, 10);
-            meshFloor = new THREE.Mesh(
-                new THREE.PlaneGeometry(1000, 1000, 10, 10), // x, y ,nb segmentsX
-                new THREE.MeshBasicMaterial({
-                    map: meshFloorTexture,
-                    side: THREE.DoubleSide
-                    // color: 0x77cc00,
-                    // wireframe: true
-                })
-            );
-            meshFloor.position.set(0, -0.5, 0);
-            meshFloor.rotation.x = Math.PI / 2;
-            scene.add(meshFloor);
+
+            meshFloor();
+            // meshBoxes()
+
+            function meshBoxes() {
+                cubes = [];
+                for (let i = 0; i < 100; i++) {
+                    // geo = new THREE.BoxGeometry(Math.random() * 100, Math.random() * 100, Math.random() * 100)
+                    geo = new THREE.BoxGeometry(Math.random() * 100, Math.random() * 100, Math.random() * 100)
+                    mat = new THREE.MeshBasicMaterial({
+                        wireframe: true
+                    })
+                    switch (i % 3) {
+                        case 0:
+                            mat.color = new THREE.Color(0xff0000)
+                            break;
+                        case 1:
+                            mat.color = new THREE.Color(0xffff00)
+                            break;
+                        case 2:
+                            mat.color = new THREE.Color(0x0000ff)
+                            break;
+                    }
+                    const cube = new THREE.Mesh(geo, mat)
+                    cubes.push(cube)
+                }
+                cubes.forEach((c) => {
+                    c.position.x = (Math.random() * 1000) - 500
+                    c.position.z = (Math.random() * 1000) - 500
+                    c.geometry.computeBoundingBox()
+                    c.position.y = (c.geometry.boundingBox.max.y - c.geometry.boundingBox.min.y) / 2
+                    scene.add(c)
+                });
+            }
+
+            function meshFloor() {
+                meshFloorTexture = new THREE.TextureLoader().load('./textures/floor.jpg');
+                meshFloorTexture.wrapS = meshFloorTexture.wrapT = THREE.RepeatWrapping;
+                meshFloorTexture.repeat.set(10, 10);
+                meshFloor = new THREE.Mesh(
+                    new THREE.PlaneGeometry(1000, 1000, 20, 20), // x, y ,nb segmentsX
+                    new THREE.MeshBasicMaterial({
+                        // map: meshFloorTexture,
+                        side: THREE.DoubleSide,
+                        color: 0x00ff00,
+
+                        // color: 0x77cc00,
+                        wireframe: true
+                    })
+                );
+                meshFloor.position.set(0, -0.5, 0);
+                meshFloor.rotation.x = Math.PI / 2;
+                scene.add(meshFloor);
+            }
 
             // Cube
             cube = new THREE.Mesh(
@@ -136,7 +205,11 @@
                 })
             );
             cube.lenght = 50;
-            cube.position.set(0, cube.lenght / 2, 0);
+            cube.position.set(0, 0 + cube.lenght / 2 + 50, 0);
+            cube.velocity = 2;
+            cube.canJump = true; //https://www.reddit.com/r/gamedev/comments/98kcpg/3d_jumping_algorithm/
+            cube.jumpHeight = 75;
+            cube.gravity = .7;
             scene.add(cube);
 
             // Sky
@@ -151,91 +224,113 @@
             // 75°, ratio of browser, ,distance
             //https://miro.medium.com/max/1400/1*HLlvkSfd4esYDN8BtNwGCQ.png
             camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-            // camera.position.set(scene.position.x, scene.position.y + 100, scene.position.z + cube.lenght / 2)
-            camera.position.set(0, 0, 500)
-            // camera.lookAt(scene.position);
+            camera.position.set(scene.position.x, scene.position.y + 200, scene.position.z + 300)
+            // camera.position.set(0, 50, 0)
             camera.lookAt(cube.position);
-            cube.add(camera);
+            scene.add(camera);
 
-            // Controls scence
-            const orbitControl = new THREE.OrbitControls(camera, renderer.domElement);
+            // camera.lookAt(cube.position);
+            // cube.add(camera);
+
+            // Controls
+            // https://codepen.io/tembling/pen/reZjEw?editors=1010
+            // const orbitControl = new THREE.OrbitControls(camera, renderer.domElement);
             // const pointerLockControl = new THREE.PointerLockControls( camera, document.body );
             // pointerLockControl = new THREE.PointerLockControls( camera, renderer.domElement );
             // pointerLockControl = new THREE.PointerLockControls(camera, document.body);
-            // pointerLockControl.getObject().position.z = 100;
+            console.log(renderer.domElement)
+            pointerLockControl = new THREE.PointerLockControls(camera, renderer.domElement);
+         
+            // pointerLockControl.addEventListener('change', () => console.log("Controls Change"))
+
+            pointerLockControl.lock();
+            scene.add(pointerLockControl.getObject());
+
+            // Move the pointerLock
+            pointerLockControl.getObject().position.z = 100;
             // pointerLockControl.getObject().position.y = 0;
-            // instructions.addEventListener('click', function () {
-            //         pointerLockControl.lock();
-            // , false); 
-
-            // scene.add(pointerLockControl.getObject());
-            // console.log(camera.position);
-
-            // var onKeyDown = function (event) {
-            //     switch (event.keyCode) {
-            //         case 38: // up
-            //         case 90: // w
-            //             moveForward = true;
-            //             break;
-
-            //         case 37: // left
-            //         case 81: // q
-            //             moveLeft = true;
-            //             break;
-
-            //         case 40: // down
-            //         case 83: // s
-            //             moveBackward = true;
-            //             break;
-
-            //         case 39: // right
-            //         case 68: // d
-            //             moveRight = true;
-            //             break;
-
-            //         case 32: // space
-            //             if (canJump === true) velocity.y += 350;
-            //             canJump = false;
-            //             break;
-            //     }
-
-            // };
-
-            // var onKeyUp = function (event) {
-
-            //     switch (event.keyCode) {
-
-            //         case 38: // up
-            //         case 90: // z
-            //             moveForward = false;
-            //             break;
-
-            //         case 37: // left
-            //         case 81: // q
-            //             moveLeft = false;
-            //             break;
-
-            //         case 40: // down
-            //         case 83: // s
-            //             moveBackward = false;
-            //             break;
-
-            //         case 39: // right
-            //         case 68: // d
-            //             moveRight = false;
-            //             break;
-
-            //     }
-
-            // };
-
-            // document.addEventListener('keydown', onKeyDown, false); document.addEventListener('keyup',
-            //     onKeyUp, false);
 
             // firstPersonControl = new THREE.FirstPersonControls(camera, renderer.domElement);
             // firstPersonControl.movementSpeed = 1000;
             // firstPersonControl.lookSpeed = 0.125;
             // firstPersonControl.lookVertical = false;
+
+            console.log(camera.position);
+
+            var blocker = document.getElementById('blocker');
+            var instructions = document.getElementById('instructions');
+
+            // Add to lock to our instructions
+            instructions.addEventListener('click', function () {
+                pointerLockControl.lock();
+            }, false);
+
+            // Lock and unlock
+            pointerLockControl.addEventListener('lock', function () {
+                instructions.style.display = 'none';
+                blocker.style.display = 'none';
+            });
+            pointerLockControl.addEventListener('unlock', function () {
+                blocker.style.display = 'block';
+                instructions.style.display = '';
+            });
+            scene.add(pointerLockControl.getObject());
+
+            // When keyoboard is pressed
+            var onKeyDown = function (event) {
+                console.log(event)
+                switch (event.keyCode) {
+                    case 38: // up
+                    case 90: // z
+                        cube.moveForward = true;
+                        // pointerLockControl.moveForward(.25)
+                        break;
+                    case 37: // left
+                    case 81: // q
+                        // cube.moveLeft = true;
+                        break;
+                    case 40: // down
+                    case 83: // s
+                        // cube.moveBackward = true;
+                        break;
+                    case 39: // right
+                    case 68: // d
+                        // cube.moveRight = true;
+                        break;
+                    case 32: // space
+                        if (cube.canJump === true) {
+                            console.log("ok")
+                            // cube.velocity.y += 350;
+                            cube.position.y += cube.jumpHeight;
+                            // cube.position.y += 5;
+                        }
+                        cube.canJump = false;
+                        break;
+                }
+            };
+            // When keyoboard is realeased
+            // var onKeyUp = function (event) {
+            //     switch (event.keyCode) {
+            //         case 38: // up
+            //         case 90: // z
+            //             cube.moveForward = false;
+            //             break;
+            //         case 37: // left
+            //         case 81: // q
+            //             cube.moveLeft = false;
+            //             break;
+            //         case 40: // down
+            //         case 83: // s
+            //             cube.moveBackward = false;
+            //             break;
+            //         case 39: // right
+            //         case 68: // d
+            //             cube.moveRight = false;
+            //             break;
+            //     }
+            // };
+            // document.addEventListener('keydown', onKeyDown);
+            // document.addEventListener('keyup', onKeyUp, false);
 
             // var cubeMaterialArray = [];
             // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
@@ -272,10 +367,6 @@
             // stats.domElement.style.bottom = '0px';
             // stats.domElement.style.zIndex = 100;
             container.appendChild(stats.domElement);
-
-            var onKeyUp = function (event) {
-                console.log(event);
-            }
         }
 
         // Game Logic
@@ -289,19 +380,45 @@
             // camera.position.y += 1
             // camera.position.z -= 1
 
-            // meshFloor.position.x += 1;
-            // meshFloor.position.y += 1;
-            // meshFloor.position.z += 1;
-
             // controls.update();
-
-            // if (pointerLockControl.isLocked === true) {
-            //     console.log("heil")
-            // }
-
-            stats.update();
             // firstPersonControl.update(clock.getDelta());
             // pointerLockControl.update(clock.getDelta());
+            // pointerLockControl.getObject().position.y += 1;
+            // pointerLockControl.getObject().position.z += 1;
+            // if (pointerLockControl.isLocked === true) {
+            //     console.log("ya")
+            // }
+
+            // Cube Movements
+            // if (cube.moveRight) {
+            //     cube.position.x += cube.velocity;
+            // }
+            // if (cube.moveLeft) {
+            //     cube.position.x -= cube.velocity;
+            // }
+            // if (cube.moveForward) {
+            //     cube.position.z -= cube.velocity;
+            // }
+            // if (cube.moveBackward) {
+            //     cube.position.z += cube.velocity;
+            // }
+
+
+            // cube.velocity.y += cube.gravity;
+            // velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+
+            // Gravity
+            if (Math.round(cube.position.y) > cube.lenght / 2) {
+                cube.position.y -= cube.gravity;
+                cube.canJump = false;
+                //     // cube.position.y -= cube.velocity;
+            } else {
+                //     cube.gravity = 0
+                // cube.position.y = cube.lenght / 2 +50;
+                cube.canJump = true;
+            }
+
+            stats.update();
         }
 
         // Run game loop(update, render, repeat)
