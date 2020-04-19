@@ -13,29 +13,26 @@
             background: #777;
             overflow: hidden;
         }
-
+        
         #blocker {
             position: absolute;
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
         }
-
+        
         #instructions {
             width: 100%;
             height: 100%;
-
             display: box;
             box-orient: horizontal;
             box-pack: center;
             box-align: center;
-
             color: #ffffff;
             text-align: center;
             font-family: Arial;
             font-size: 14px;
             line-height: 24px;
-
             cursor: pointer;
         }
     </style>
@@ -45,10 +42,7 @@
     <div id="blocker">
         <div id="instructions">
             <span style="font-size:36px">Click to play</span>
-            <br /><br />
-            Move: WASD<br />
-            Jump: SPACE<br />
-            Look: MOUSE
+            <br /><br /> Move: WASD<br /> Jump: SPACE<br /> Look: MOUSE
         </div>
     </div>
     <div id="container"></div>
@@ -73,7 +67,7 @@
         let firstPersonControl, pointerLockControl;
 
         // Resize the renderer and the camera if we resize the window
-        window.addEventListener('resize', function () {
+        window.addEventListener('resize', function() {
             renderer.setSize(window.innerWidth, window.innerHeight);
 
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -83,7 +77,7 @@
         // view-source:https://threejs.org/examples/webgl_geometry_minecraft.html
 
         // function createSphere(arc, tube, radial_segment, tubular_segment, material) {
-        const load = function () {
+        const load = function() {
             // Set the scene size.
             const SCREEN_WIDTH = window.innerWidth;
             const SCREEN_HEIGHT = window.innerHeight;
@@ -196,6 +190,37 @@
                 scene.add(meshFloor);
             }
 
+
+            // Creation de la petite sphere
+
+            sphereGeometry2 = new THREE.SphereGeometry(20, 32, 32);
+
+            sphereMaterial2 = new THREE.MeshStandardMaterial({
+                map: new THREE.TextureLoader().load('./venusmap.png')
+            });
+
+            sphereObject = new THREE.Mesh(sphereGeometry2, sphereMaterial2);
+            sphereObject.position.set(Math.random() * 400, 40, Math.random() * 200);
+            scene.add(sphereObject);
+            sphereObject.angle = 100;
+            sphereObject.add(
+                new THREE.PointLight(color = '#ff0000', intensity = 2)
+            );
+            sphere = scene.getObjectByName("sphere");
+
+
+            // Attraper la sphere
+
+            //var controls;
+            //var message = document.getElementById('message');
+            //if (sphereObject.position.distanceTo(controls.getObject().position) < 50) {
+            //blocker.style.display = '';
+            //instructions.innerHTML = "Bravo ! tu as trouvé la sphère";
+            //instructions.style.display = '';
+            //sphereObject.position.set(Math.random() * 400, 40, Math.random() * 200);
+            //}
+
+
             // Cube
             cube = new THREE.Mesh(
                 new THREE.BoxGeometry(50, 50, 50),
@@ -225,7 +250,7 @@
             //https://miro.medium.com/max/1400/1*HLlvkSfd4esYDN8BtNwGCQ.png
             camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
             camera.position.set(scene.position.x, scene.position.y + 200, scene.position.z + 300)
-            // camera.position.set(0, 50, 0)
+                // camera.position.set(0, 50, 0)
             camera.lookAt(cube.position);
             scene.add(camera);
 
@@ -240,7 +265,7 @@
             // pointerLockControl = new THREE.PointerLockControls(camera, document.body);
             console.log(renderer.domElement)
             pointerLockControl = new THREE.PointerLockControls(camera, renderer.domElement);
-         
+
             // pointerLockControl.addEventListener('change', () => console.log("Controls Change"))
 
             pointerLockControl.lock();
@@ -261,23 +286,23 @@
             var instructions = document.getElementById('instructions');
 
             // Add to lock to our instructions
-            instructions.addEventListener('click', function () {
+            instructions.addEventListener('click', function() {
                 pointerLockControl.lock();
             }, false);
 
             // Lock and unlock
-            pointerLockControl.addEventListener('lock', function () {
+            pointerLockControl.addEventListener('lock', function() {
                 instructions.style.display = 'none';
                 blocker.style.display = 'none';
             });
-            pointerLockControl.addEventListener('unlock', function () {
+            pointerLockControl.addEventListener('unlock', function() {
                 blocker.style.display = 'block';
                 instructions.style.display = '';
             });
             scene.add(pointerLockControl.getObject());
 
             // When keyoboard is pressed
-            var onKeyDown = function (event) {
+            var onKeyDown = function(event) {
                 console.log(event)
                 switch (event.keyCode) {
                     case 38: // up
@@ -300,7 +325,7 @@
                     case 32: // space
                         if (cube.canJump === true) {
                             console.log("ok")
-                            // cube.velocity.y += 350;
+                                // cube.velocity.y += 350;
                             cube.position.y += cube.jumpHeight;
                             // cube.position.y += 5;
                         }
@@ -370,7 +395,7 @@
         }
 
         // Game Logic
-        let update = function () {
+        let update = function() {
             // cube.rotation.x += .01;
             // cube.rotation.y += .03;
 
@@ -422,7 +447,7 @@
         }
 
         // Run game loop(update, render, repeat)
-        const gameLoop = function () {
+        const gameLoop = function() {
             requestAnimationFrame(gameLoop);
             update();
 
