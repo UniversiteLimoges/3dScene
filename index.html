@@ -5,41 +5,16 @@
     <meta name="author" content="Paul Lewis" />
     <meta name="viewport" content="width=device-width">
     <title></title>
-    <style>
-        html,
-        body {
-            padding: 0;
-            margin: 0;
-            background: #777;
-            overflow: hidden;
-        }
-
-        #instructions {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-
-            display: table;
-
-            color: #ffffff;
-            text-align: center;
-            font-family: Arial;
-            font-size: 14px;
-            margin: auto;
-
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="./css/main.css">
 </head>
 
 <body>
-    <div id="instructions">
+    <!-- <div id="instructions">
         <span>Cliquez afin de jouer</span>
         Déplacements : ZSQD ou Flèches<br />
         Sauter : Espace<br />
         Regarder : Souris
-    </div>
+    </div> -->
     <div id="container"></div>
 
     <!-- Principal -->
@@ -48,17 +23,26 @@
     <!-- <script src="./third_party/loaders/ColladaLoader.js"></script> -->
     <!-- Controls -->
     <script src="./third_party/OrbitControls.js"></script>
-    <script src="./third_party/FirstPersonControls.js"></script>
     <script src="./third_party/PointerLockControls.js"></script>
     <script src="./third_party/libs/stats.min.js"></script>
 
+    <!-- Dat gui -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+
     <script>
-        let camera, scene, renderer;
+        let camera, scene, renderer, pointerLockControl;
         let clock = new THREE.Clock();
 
+        let mouse = new THREE.Vector2(),
+            INTERSECTED; // vector x : 0, y : 0
+        let raycaster = new THREE.Raycaster();
+
         // view-source:https://threejs.org/examples/webgl_geometry_minecraft.html
-        let firstPersonControl, pointerLockControl;
         let loader = new THREE.TextureLoader();
+
+        let spheresToRaycast = [];
+        let sphereGet = [];
+        let sphereSelected;
 
         // Resize the renderer and the camera if we resize the window
         window.addEventListener('resize', function () {
@@ -95,101 +79,66 @@
             // scene.fog = new THREE.FogExp2(0x9999ff, 0.00025);
             // scene.fog = new THREE.Fog(scene.background, 10, 20);
 
-            // Lights
-            // const light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.75 );
-            // light.position.set( 0.5, 1, 0.75 );
-            // scene.add( light );
-
-            // Point de lumière
-            // const pointLight = new THREE.PointLight(0xFFFFFF);
-            // pointLight.position.x = 10;
-            // pointLight.position.y = 50;
-            // pointLight.position.z = 130;
-            // scene.add(pointLight);
-
-            // Lumière ambiante
-            // const ambientLight = new THREE.AmbientLight(0xcccccc, 0.4);
-            // scene.add(ambientLight);
-
-            // Lumière directionnelle
-            // const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            // directionalLight.position.set(1, -1, 0).normalize();
-            // scene.add(directionalLight);
-
-            // collada
-            // const loadingManager = new THREE.LoadingManager(function () {});
-            // const colladaLoader = new THREE.ColladaLoader(loadingManager);
-            // colladaLoader.load('./models/pion/model.dae', function (collada) {});
-
-            // Ground
-            // window.addEventListener('keydown', KeyDown);
-            // window.addEventListener('keyup', KeyUp);
-            // https://www.youtube.com/watch?v=UUilwGxIj_Q
-            // https://makc3d.wordpress.com/2014/07/20/thre
-            // https://free3d.com/fr/3d-models/ville
-            // https://www.youtube.com/watch?v=6oFvqLfRnsU
-            // https://blog.webmaestro.fr/character-controls-three-js/
-
+            addLights();
             meshFloor();
-            // meshBoxes()
-            meshBox()
 
             // 75°, ratio of browser, ,distance
             //https://miro.medium.com/max/1400/1*HLlvkSfd4esYDN8BtNwGCQ.png
+            //https://www.reddit.com/r/gamedev/comments/98kcpg/3d_jumping_algorithm/
             camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-            camera.position.set(scene.position.x, scene.position.y + 50, scene.position.z + 300)
+            camera.cameraHeight = scene.position.y + 75;
+            camera.position.set(scene.position.x, camera.cameraHeight, scene.position.z + 300)
+            // camera.velocity = 2;
+            // camera.canJump = true;
+            // camera.jumpHeight = 75;
+            // camera.gravity = .7;
+            // // camera.getWorldDirection( camera.direction );
             // camera.direction = new THREE.Vector3();
-            camera.velocity = 2;
-            camera.canJump = true; //https://www.reddit.com/r/gamedev/comments/98kcpg/3d_jumping_algorithm/
-            camera.jumpHeight = 75;
-            camera.gravity = .7;
-            // camera.getWorldDirection( camera.direction );
             // camera.position.add( camera.direction );
             // camera.distance = 100;
             // camera.position.add( camera.direction.multiplyScalar(camera.distance) );
             camera.lookAt(0, 50, 0);
-            meshFloor.add(camera);
+            // camera.angle = getCameraAngle(camera.getWorldDirection());
+            // console.log('camera angle:' + camera.angle);
 
-            // Controls
+            scene.add(camera);
+
+            // Controls camera
             // https://codepen.io/tembling/pen/reZjEw?editors=1010
             // const orbitControl = new THREE.OrbitControls(camera, renderer.domElement);
-            // const pointerLockControl = new THREE.PointerLockControls( camera, document.body );
-
             // Allow to focus the window
             pointerLockControl = new THREE.PointerLockControls(camera, renderer.domElement);
-            scene.add(pointerLockControl.getObject());
 
-            // firstPersonControl = new THREE.FirstPersonControls(camera, renderer.domElement);
-            // firstPersonControl.movementSpeed = 1000;
-            // firstPersonControl.lookSpeed = 0.125;
-            // firstPersonControl.lookVertical = false;
-
+            // Menu - when we press 
             var instructions = document.getElementById('instructions');
+
+            // container.addEventListener('click', (e) => {
+            //     container.requestFullscreen();
+            // }); 
+
             // Add to lock to our instructions
-            instructions.addEventListener('click', function () {
-                pointerLockControl.lock();
-            }, false);
+            // instructions.addEventListener('click', function () {
+            //     pointerLockControl.lock();
+            // }, false);
 
             // Lock and unlock
-            pointerLockControl.addEventListener('lock', function () {
-                instructions.style.display = 'none';
-            });
-            pointerLockControl.addEventListener('unlock', function () {
-                instructions.style.display = '';
-            });
+            // pointerLockControl.addEventListener('lock', function () {
+            //     instructions.style.display = 'none';
+            // });
+            // pointerLockControl.addEventListener('unlock', function () {
+            //     instructions.style.display = '';
+            // });
 
             // When keyoboard is pressed
             var onKeyDown = function (event) {
                 console.log(event)
                 switch (event.keyCode) {
+                    case 65: // lock the screen, escape to exit
+                        pointerLockControl.lock();
+                        break;
                     case 38: // up
                     case 90: // z
                         camera.moveForward = true;
-                        // pointerLockControl.moveForward(.25)
-                        // camera.getWorldDirection( camera.direction ); // CHAGNED
-                        // camera.position.add(camera.direction.multiplyScalar(2));
-                        // camera.position.x -= 50;
-                        // camera.translateX(-5);
                         break;
                     case 40: // down
                     case 83: // s
@@ -246,23 +195,65 @@
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp, false);
 
-            meshSphere();
-            // sphere = scene.getObjectByName("sphere");
+            meshSpheres();
+            // meshBoxes()
+            meshBox();
 
-            // Catch the Sphere
-            //var controls;
-            //var message = document.getElementById('message');
-            //if (sphereObject.position.distanceTo(controls.getObject().position) < 50) {
-            //blocker.style.display = '';
-            //instructions.innerHTML = "Bravo ! tu as trouvé la sphère";
-            //instructions.style.display = '';
-            //sphereObject.position.set(Math.random() * 400, 40, Math.random() * 200);
-            //}
+            // GUI
+            let gui = new dat.GUI();
+            guiControls = new function () {
+                // this.color = selected.material.color.getStyle();
+                this.sphereNumber = 1;
+                // this.message = "dat.guiのサンプル";
+                this.sphereSize = 24;
+                this.sphereColor = 0xff0000;
+                this.sphereRotation = false;
+                this.sphereCaptured = 0xff0000;
+            };
 
+            // Add param to the GUI
+            // gui.addColor(guiControls, "color").listen().onChange(function (e) {
+            //     selected.material.color.setStyle(e);
+            // });
+            // gui.add(guiControls, 'message');
+
+            gui.add(guiControls, 'sphereNumber', 1, 20).name("Sphere Number");
+            gui.add(guiControls, 'sphereSize', 20, 100).name("Sphere Size");
+            // Change the color of each sphere
+            gui.addColor(guiControls, 'sphereColor').name("Spheres Color").onChange(function () {
+                spheresToRaycast.forEach(e =>
+                    e.material.color.set(guiControls.sphereColor)
+                );
+            });
+            // Change the color of ours spheres
+            gui.addColor(guiControls, 'sphereCaptured').name("Spheres Captured").listen().onChange(function (e) {
+                sphereSelected.material.color.setStyle(e);
+            });
+            gui.add(guiControls, 'sphereRotation').name("Sphere Rotation");
+
+            // gui.add(guiControls, 'sphereRotation', 20, 100).name("Sphere Rotation");
+            // if (sphereSelected.detached && sphere != undefined) {
+            //     sphereSelected.geometry.boundingSphere.radius = 500
+            // }
+
+            // document.addEventListener('fullscreenchange', (event) => {
+            //     // document.fullscreenElement will point to the element that
+            //     // is in fullscreen mode if there is one. If there isn't one,
+            //     // the value of the property is null.
+            //     if (document.fullscreenElement) {
+            //         console.log(`Element: ${document.fullscreenElement.id} entered full-screen mode.`);
+            //     } else {
+            //         console.log('Leaving full-screen mode.');
+            //     }
+            // });
+
+            renderer.domElement.addEventListener("click", raycasting);
+            // scene.addEventListener("click", raycasting);
+            // document.addEventListener('mousedown', onDocumentMouseMove, false);
 
             // Help axes
-            var axes = new THREE.AxesHelper(1000);
-            scene.add(axes);
+            var axe1 = new THREE.AxesHelper(1000);
+            scene.add(axe1);
 
             // Stats
             stats = new Stats();
@@ -273,17 +264,6 @@
         let update = function () {
             // If we are in the window when it is locked
             if (pointerLockControl.isLocked) {
-                // firstPersonControl.update(clock.getDelta());
-
-                // pointerLockControl.update(clock.getDelta());
-                // Move the pointerLock
-                // pointerLockControl.getObject().position.z = 100;
-                // pointerLockControl.getObject().position.y = 0;
-                // if (pointerLockControl.isLocked === true) {
-                //     console.log("ya")
-                // }
-                // console.log(camera.moveRight)
-
                 // Cube Movements
                 // if (Math.round(camera.position.y >= 50)) {
                 // camera.position.y = 50
@@ -298,11 +278,11 @@
                 // Moves
                 if (camera.moveForward) {
                     camera.translateZ(-5);
-                    camera.position.y = 50;
+                    camera.position.y = camera.cameraHeight;
                 }
                 if (camera.moveBackward) {
                     camera.translateZ(5);
-                    camera.position.y = 50;
+                    camera.position.y = camera.cameraHeight
                 }
                 if (camera.moveRight) {
                     camera.translateX(5);
@@ -313,10 +293,9 @@
                 }
                 // } 
 
-                // Fix camera on the ground
-                // if (camera.position.y > 50 || camera.position.y < 50) {
+                // Fix camera on the ground - if (camera.position.y > 50 || camera.position.y < 50) {
                 if (camera.position.y < 50) {
-                    camera.position.y = 50;
+                    camera.position.y = camera.cameraHeight
                 };
 
                 // Gravity
@@ -331,7 +310,42 @@
                 // cube.canJump = true;
                 // }
 
+
                 stats.update();
+            } else {
+                raycasting();
+            }
+
+            // Sphere selected for the player
+            if (sphereSelected != undefined) {
+                if (sphereSelected.detached) {
+                    // sphereSelected.position.x = camera.position.x * Math.cos(THREE.Math.degToRad(sphereSelected.angle));
+                    // sphereSelected.position.z = camera.position.z + 100 *  Math.sin(THREE.Math.degToRad(sphereSelected.angle));
+
+                    // vector.set(1, 2, 3);
+                    // // map to normalized device coordinate (NDC) space
+                    // vector.project(sphereSelected);
+                    // // map to 2D screen space
+                    // vector.x = Math.round((vector.x + 1) * container.width / 2);
+                    // vector.y = Math.round((-vector.y + 1) * container.height / 2);
+                    // vector.z = 0;
+
+                    sphereSelected.position.set(camera.position.x, camera.position.y, camera.position.z - 100)
+                    // console.log(camera.rotate.x)
+
+                    // sphereSelected.rotation.y += .001;
+                    // sphereSelected.angle -= 1;
+                    // console.log(sphereSelected.geometry.boundingSphere.radius)
+                    // console.log(sphereSelected)
+                    // sphereSelected.geometry.boundingSphere.radius = sphereSelected.geometry.boundingSphere.radius * 4 
+
+                    // console.log(sphereSelected.rotation)
+
+                    // console.log(container)
+                } else {
+                   
+
+                }
             }
             // }
         }
@@ -351,76 +365,128 @@
         // Schedule the first frame.
         requestAnimationFrame(update);
 
-        // Axes to help up
-        function helpAxes() {
-            // let axesHelper1 = new THREE.AxesHelper(50);
-            // let axesHelper2 = new THREE.AxesHelper(50);
-            // let axesHelper3 = new THREE.AxesHelper(50);
+        function raycasting(e) {
+            // console.log("ok")
+            if (e != undefined) {
+                mouse.x = event.clientX / window.innerWidth * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            }
 
-            // scene.add(axesHelper1);
-            // sphere.add(axesHelper1);
-            // obj3d.add(axesHelper2);
-            // pion.add(axesHelper3);
+            // RAYCASTING
+            // find intersections
+            raycaster.setFromCamera(mouse, camera);
+            var intersects = raycaster.intersectObjects(spheresToRaycast, true);
+            // If there is an intersect by click
+            if (intersects.length > 0 && e) {
+                // If the current object intersected is not currently stored
+                if (INTERSECTED != intersects[0].object) {
+                    // Store reference to the closest object as current intersection object
+                    INTERSECTED = intersects[0].object;
+
+                    // Current sphere - Store our sphere for the gui
+                    sphereSelected = INTERSECTED;
+
+                    // Add the color to the gui 
+                    guiControls.color = sphereSelected.material.color.getStyle();
+
+                    // Add the sphere to the player
+                    sphereSelected.detached = true;
+                    sphereGet.push(INTERSECTED);
+
+                    // Delete the sphere from all spheres to raycast
+                    for (let i = 0; i < spheresToRaycast.length; i++) {
+                        const element = spheresToRaycast[i];
+                        // If the sphere selected is from all spheresToRaycast
+                        if (INTERSECTED.uuid === element.uuid) {
+                            spheresToRaycast.splice(i, 1) //delete
+                            // console.log(element.uuid)
+                            // console.log(spheresToRaycast)
+                        }
+                    }
+                }
+            } else { // no intersections
+                // Stop Intersected
+                // INTERSECTED = null;
+            }
         }
 
+        function meshSpheres() {
+            const sphereTexture = loader.load('./textures/sphere2.png');
+            let spheres = [];
 
+            for (let i = 0; i < 10; i++) {
+                // Create the sphere
+                sphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(15, 32, 32),
+                    // new THREE.MeshBasicMaterial({
+                    new THREE.MeshLambertMaterial({
+                        // map: sphereTexture,
+                        // side: THREE.FrontSide,
+                        // wireframe: true,
+                        color: 0x00ff00
+                    })
+                );
+                sphere.position.set(Math.random() * meshFloor.material.map.wrapS * 2, meshFloor.position.y + 75, Math
+                    .random() *
+                    meshFloor.material.map.wrapS);
+                // sphere2.angle = 100;
+                // sphere.light = new THREE.PointLight(0xff0000, 1, 500);
+                // sphere.light.position.set(1, 1, 1).normalize();
+                // sphere.add(sphere.light);
+                spheres.push(sphere)
+            }
 
-        function meshSphere() {
-            // Create the sphere
-            const sphere2Texture = loader.load('./textures/sphere2.png')
-            sphere2 = new THREE.Mesh(
-                new THREE.SphereGeometry(20, 32, 32),
+            // Add sphere to the scene
+            spheres.forEach((s) => {
+                // add each spheres to the scene
+                scene.add(s);
+                // add each sphere in the array to raycast (not allow the ground to be raycasted)
+                spheresToRaycast.push(s);
+            });
+        }
+
+        function meshBox() {
+            const lenght = 100;
+            const cube = new THREE.Mesh(
+                new THREE.BoxGeometry(lenght, lenght, lenght),
                 new THREE.MeshBasicMaterial({
-                    map: sphere2Texture,
-                    side: THREE.FrontSide
+                    color: 0xffffff,
+                    wireframe: true
                 })
-            )
-            sphere2.position.set(0, 50, 0);
-            sphere2.angle = 100;
-            sphere2.add(
-                new THREE.PointLight(color = '#ff0000', intensity = 2)
             );
-            scene.add(sphere2);
+
+            // offsetX = Math.random(meshFloor.position.x - lenght/2, )
+            // offsetX = Math.random(-500, meshFloor.geometry.parameters.width - lenght * 1.5)
+            offsetX = Math.floor(Math.random() * meshFloor.geometry.parameters.width - lenght * 1.5)
+            cube.position.set(offsetX, meshFloor.position.y, meshFloor.position.z - 50);
+            meshFloor.add(cube);
         }
 
-        // function createForme(form, material) {
-        //     // Create a new mesh with sphere geometry
-        //     const forme = new THREE.Mesh(form, material);
-
-        //     // Reset of angles
-        //     if (forme.angle > 360) {
-        //         forme.angle = 1;
-        //     } else if (forme.angle < 1) {
-        //         forme.angle = 360;
-        //     }
-
-        //     return forme;
-        // }
         function meshComplexBoxes() {
-                        // var cubeMaterialArray = [];
-            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
-            //     color: 0xff3333
-            // }));
-            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
-            //     color: 0xff8800
-            // }));
-            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
-            //     color: 0xffff33
-            // }));
-            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
-            //     color: 0x33ff33
-            // }));
-            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
-            //     color: 0x3333ff
-            // }));
-            // cubeMaterialArray.push(new THREE.MeshBasicMaterial({
-            //     color: 0x8833ff
-            // }));
-            // var cubeMaterials = new THREE.MeshFaceMaterial(cubeMaterialArray);
-            // var cubeGeometry = new THREE.CubeGeometry(100, 100, 100, 1, 1, 1);
-            // cubeComplexe = new THREE.Mesh(cubeGeometry, cubeMaterials);
-            // cubeComplexe.position.set(-100, 50, -50);
-            // scene.add(cubeComplexe);
+            const cubeMaterialArray = [];
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0xff3333
+            }));
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0xff8800
+            }));
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0xffff33
+            }));
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0x33ff33
+            }));
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0x3333ff
+            }));
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0x8833ff
+            }));
+            var cubeMaterials = new THREE.MeshFaceMaterial(cubeMaterialArray);
+            var cubeGeometry = new THREE.CubeGeometry(100, 100, 100, 1, 1, 1);
+            cubeComplexe = new THREE.Mesh(cubeGeometry, cubeMaterials);
+            cubeComplexe.position.set(-100, 50, -50);
+            scene.add(cubeComplexe);
         }
 
         function meshBoxes() {
@@ -458,39 +524,18 @@
             const meshFloorTexture = loader.load('./textures/floor.jpg');
             meshFloorTexture.wrapS = meshFloorTexture.wrapT = THREE.RepeatWrapping;
             meshFloorTexture.repeat.set(1, 1);
+            const floorSize = 5000;
             meshFloor = new THREE.Mesh(
-                new THREE.PlaneGeometry(200, 200, 20, 20), // x, y ,nb segmentsX
+                new THREE.PlaneGeometry(floorSize, floorSize, 100, 100), // x, y ,nb segmentsX
                 new THREE.MeshBasicMaterial({
                     map: meshFloorTexture,
-                    side: THREE.DoubleSide
-                    // color: 0x00ff00,
+                    // color: 0x000000,
                     // wireframe: true,
+                    side: THREE.DoubleSide
                 })
             );
-            // meshFloor.position.set(0, -.5, 0);
             meshFloor.rotation.x = Math.PI / 2;
             scene.add(meshFloor);
-
-            // console.log( meshFloor.geometry.parameters.width);
-            console.log(meshFloor.geometry.parameters.height);
-        }
-
-        function meshBox() {
-            const lenght = 100;
-            const cube = new THREE.Mesh(
-                new THREE.BoxGeometry(lenght, lenght, lenght),
-                new THREE.MeshBasicMaterial({
-                    color: 0xffffff,
-                    wireframe: true
-                })
-            );
-
-            // offsetX = Math.random(meshFloor.position.x - lenght/2, )
-            // offsetX = Math.random(-500, meshFloor.geometry.parameters.width - lenght * 1.5)
-            offsetX = Math.floor(Math.random() * meshFloor.geometry.parameters.width - lenght * 1.5)
-            console.log(offsetX)
-            cube.position.set(offsetX, meshFloor.position.y, meshFloor.position.z - 50);
-            meshFloor.add(cube);
         }
 
         function meshSky() {
@@ -502,6 +547,43 @@
             });
             var skyBox = new THREE.Mesh(skyBoxGeometry, skyBoxMaterial);
             scene.add(skyBox);
+        }
+
+        function addLights() {
+            // Lights
+            const light = new THREE.HemisphereLight(0xeeeeff, 0x777788, 0.75);
+            light.position.set(0.5, 1, 0.75);
+            scene.add(light);
+
+            // Point de lumière
+            // const pointLight = new THREE.PointLight(0xFFFFFF);
+            // pointLight.position.x = 10;
+            // pointLight.position.y = 50;
+            // pointLight.position.z = 130;
+            // scene.add(pointLight);
+
+            // Lumière ambiante
+            // const ambientLight = new THREE.AmbientLight(0xcccccc, 0.4);
+            // scene.add(ambientLight);
+
+            // Lumière directionnelle
+            // const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            // directionalLight.position.set(1, -1, 0).normalize();
+            // scene.add(directionalLight);
+
+            // collada
+            // const loadingManager = new THREE.LoadingManager(function () {});
+            // const colladaLoader = new THREE.ColladaLoader(loadingManager);
+            // colladaLoader.load('./models/pion/model.dae', function (collada) {});
+
+        }
+
+        function onDocumentMouseMove(event) {
+            event.preventDefault();
+
+            // sets the mouse position with a coordinate system where the center of the screen is the origin
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         }
     </script>
 </body>
