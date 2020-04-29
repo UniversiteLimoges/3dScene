@@ -1,0 +1,664 @@
+<!doctype html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="author" content="Paul Lewis" />
+    <meta name="viewport" content="width=device-width">
+    <title></title>
+    <link rel="stylesheet" href="./css/main.css">
+</head>
+
+<body>
+    <!-- <div id="instructions">
+        <span>Cliquez afin de jouer</span>
+        Déplacements : ZSQD ou Flèches<br />
+        Sauter : Espace<br />
+        Regarder : Souris
+    </div> -->
+    <div id="container"></div>
+
+    <!-- Principal -->
+    <script src="./third_party/build/three.js"></script>
+    <!-- Loaders -->
+    <!-- <script src="./third_party/loaders/ColladaLoader.js"></script> -->
+    <!-- Controls -->
+    <script src="./third_party/OrbitControls.js"></script>
+    <script src="./third_party/PointerLockControls.js"></script>
+    <script src="./third_party/libs/stats.min.js"></script>
+
+    <!-- Dat gui -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+
+    <script>
+        let camera, scene, renderer;
+        const SCREEN_WIDTH = window.innerWidth;
+        const SCREEN_HEIGHT = window.innerHeight;
+
+        // Camera parameters
+        const VIEW_ANGLE = 45;
+        const ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
+        const NEAR = .1;
+        const FAR = 10000;
+        let pointerLockControl;
+
+        // Mouse
+        let mouse = new THREE.Vector2(),
+            INTERSECTED; // vector x : 0, y : 0
+        let raycaster = new THREE.Raycaster();
+
+        // let clock = new THREE.Clock();
+        let loader = new THREE.TextureLoader();
+
+        // Forms
+        let spheresToRaycast = [];
+        let spheresGet = [];
+        let sphereSelected;
+
+        const load = function () {
+            // Scene - Create a scene
+            scene = new THREE.Scene();
+            // Background and Fog
+            // scene.background = new THREE.Color(0x01374c);
+            // scene.fog = new THREE.FogExp2(0x9999ff, 0.00025);
+            // scene.fog = new THREE.Fog(scene.background, 10, 20);
+
+            // Renderer - Create a WebGL renderer and starts it
+            renderer = new THREE.WebGLRenderer();
+            // renderer.setClearColor(scene.fog.color);
+            // renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+
+            // Get the DOM element to attach to
+            const container = document.querySelector('#container');
+            // Attach 1the renderer-supplied DOM element.
+            container.appendChild(renderer.domElement);
+
+            addLights();
+            meshFloor();
+
+            // Camera
+            // 75°, ratio of browser, ,distance
+            //https://miro.medium.com/max/1400/1*HLlvkSfd4esYDN8BtNwGCQ.png
+            //https://www.reddit.com/r/gamedev/comments/98kcpg/3d_jumping_algorithm/
+            // Scene parameters
+            camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+            camera.cameraHeight = scene.position.y + 75;
+            camera.position.set(scene.position.x - 1000, camera.cameraHeight, scene.position.z -1000)
+            // camera.velocity = 2;
+            // camera.canJump = true;
+            // camera.jumpHeight = 75;
+            // camera.gravity = .7;
+            // camera.position.add( camera.direction.multiplyScalar(camera.distance) );
+            camera.lookAt(0, 50, 0);
+            scene.add(camera);
+
+            // Controls camera
+            // https://codepen.io/tembling/pen/reZjEw?editors=1010
+            // const orbitControl = new THREE.OrbitControls(camera, renderer.domElement);
+            // Allow to focus the window
+            pointerLockControl = new THREE.PointerLockControls(camera, renderer.domElement);
+
+            // Add the raycasting function to the renderer
+            renderer.domElement.addEventListener("click", raycasting);
+
+            // Menu - when we press 
+            // var instructions = document.getElementById('instructions');
+            // container.addEventListener('click', (e) => {
+            //     container.requestFullscreen();
+            // });
+
+            // Add to lock to our renderer
+            // renderer.domElement.addEventListener('click', function () {
+            //     pointerLockControl.lock();
+            // }, false);
+
+            // Lock and unlock
+            // pointerLockControl.addEventListener('lock', function () {
+            //     instructions.style.display = 'none';
+            // });
+            // pointerLockControl.addEventListener('unlock', function () {
+            //     instructions.style.display = '';
+            // });
+
+            // When keyoboard is pressed
+            var onKeyDown = function (event) {
+                switch (event.keyCode) {
+                    case 65: // lock the screen, escape to exit
+                        pointerLockControl.lock();
+                        break;
+                    case 38: // up
+                    case 90: // z
+                        camera.moveForward = true;
+                        break;
+                    case 40: // down
+                    case 83: // s
+                        camera.moveBackward = true;
+                        break;
+                    case 37: // left
+                    case 81: // q
+                        // cube.moveLeft = true;
+                        camera.moveLeft = true;
+                        break;
+                    case 39: // right
+                    case 68: // d
+                        // cube.moveRight = true;
+                        camera.moveRight = true;
+                        break;
+                    case 32: // space
+                        if (camera.canJump === true) {
+                            console.log("ok")
+                            // cube.velocity.y += 350;
+                            // cube.position.y += 5;
+                        }
+                        camera.canJump = false;
+                        break;
+                    case 16: // shift
+                        camera.moveMore = true;
+                        break;
+                }
+
+            };
+            // When keyoboard is realeased
+            var onKeyUp = function (event) {
+                switch (event.keyCode) {
+                    case 38: // up
+                    case 90: // z
+                        camera.moveForward = false;
+                        break;
+                    case 37: // left
+                    case 81: // q
+                        camera.moveLeft = false;
+                        break;
+                    case 40: // down
+                    case 83: // s
+                        camera.moveBackward = false;
+                        break;
+                    case 39: // right
+                    case 68: // d
+                        camera.moveRight = false;
+                        break;
+                    case 16: // shift
+                        camera.moveMore = false;
+                        break;
+                }
+            };
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp, false);
+
+            gui();
+
+            // for (let index = 0; index < 10 ; index++) {
+            //     meshSphere();
+            // }
+
+            // meshBoxes()
+            // meshBox();
+
+            // Help axes
+            var axe1 = new THREE.AxesHelper(1000);
+            scene.add(axe1);
+
+            // Stats
+            stats = new Stats();
+            container.appendChild(stats.domElement);
+
+            // Resize the renderer and the camera if we resize the window
+            window.addEventListener('resize', function () {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+            });
+        }
+
+        // Game Logic
+        let update = function () {
+            let radiusCameraX = 100;
+            let radiusCameraZ = 100;
+            let offsetCameraY = 20;
+            let nbTotalOfSphere = spheresToRaycast.length + spheresGet.length;
+
+            // Array of each sphere to raycast - Change the parameters of each sphere
+            spheresToRaycast.forEach(sphere => {
+                sphere.scale.x = guiControls.sphereSize;
+                sphere.scale.y = guiControls.sphereSize;
+                sphere.scale.z = guiControls.sphereSize;
+
+                sphere.material.color.set(guiControls.sphereColor)
+            });
+
+            // Array of spheres we have
+            spheresGet.forEach(sphere => {
+                sphere.angle += .1;
+                radiusCameraX += 100;
+                radiusCameraZ += 100;
+                offsetCameraY -= 10;
+
+                // Dat.gui - Rotation and positionning of each sphere
+                if (guiControls.sphereRotation) {
+                    sphere.position.x = camera.position.x - radiusCameraX * Math.cos(sphere.angle) * sphere
+                        .velocity;
+                    sphere.position.z = camera.position.z - radiusCameraZ * Math.sin(sphere.angle) * sphere
+                        .velocity;
+                    sphere.position.y = camera.position.y - offsetCameraY;
+                } else {
+                    // console.log(renderer.domElement.width)
+                    // sphere.position.x = camera.position.x + 50;
+                    // sphere.position.z = camera.position.z + 50;
+                    // sphere.position.y = camera.position.y - offsetCameraY;
+
+                    // sphere.position.x = sphere.position.x  * renderer.domElement.width / 2;
+                    // sphere.position.y = -sphere.position.y * renderer.domElement.height / 2;
+                    // sphere.position.z = 0;
+
+                    // console.log(sphere.getWorldPosition())
+                }
+
+                // Dat.gui - Colors of each sphere we have
+                sphere.material.color.set(guiControls.sphereCaptured)
+            });
+
+            // PLAY - If the nomber total of sphere is not the same as all the sphere we have
+            if (guiControls.sphereNumber != spheresGet.length || guiControls.sphereNumber !=
+                nbTotalOfSphere) {
+
+                // If we are in the window when it is locked
+                if (pointerLockControl.isLocked) {
+                    // Speed up
+                    if (camera.moveMore && camera.moveForward) {
+                        camera.translateZ(-10);
+                    }
+                    // Moves
+                    if (camera.moveForward) {
+                        camera.translateZ(-5);
+                        camera.position.y = camera.cameraHeight;
+                    }
+                    if (camera.moveBackward) {
+                        camera.translateZ(5);
+                        camera.position.y = camera.cameraHeight
+                    }
+                    if (camera.moveRight) {
+                        camera.translateX(5);
+                    }
+                    if (camera.moveLeft) {
+                        // camera.position.x -= camera.velocity;
+                        camera.translateX(-5);
+                    }
+                    if (camera.position.y < 50) {
+                        camera.position.y = camera.cameraHeight
+                    };
+
+                    stats.update();
+
+                    // Pointerlock not active so we can play
+                } else {
+                    raycasting();
+
+                    // Add the number of spheres
+                    if (guiControls.sphereNumber > nbTotalOfSphere) {
+                        meshSphere();
+                    }
+                    // Decrease the number of spheres
+                    else if (guiControls.sphereNumber < nbTotalOfSphere) {
+                        // the number in the table of the sphere to delete
+                        let sphereToDeleteNumber;
+                        sphereToDeleteNumber = Math.floor(Math.random() * spheresToRaycast.length), 1;
+                        let sphereToDelete;
+
+                        // Get a random sphere number from the table
+                        // console.log(sphereToDeleteNumber)
+
+                        // Get the sphere
+                        sphereToDelete = spheresToRaycast[spheresToRaycast.length - 1];
+
+                        // For the tables of raycasted spheres
+                        scene.remove(sphereToDelete);
+                        sphereToDelete.geometry.dispose();
+                        sphereToDelete.material.dispose();
+                        sphereToDelete = undefined;
+
+                        spheresToRaycast.pop();
+                    }
+                }
+                // Victory
+            } else {
+                window.location.href = "./index.html";
+            }
+
+            // Sphere selected for the player
+            // if (sphereSelected != undefined) {
+            //     if (sphereSelected.detached) {
+            //         // sphereSelected.position.z = camera.position.z + 100 *  Math.sin(THREE.Math.degToRad(sphereSelected.angle));
+            //         // vector.set(1, 2, 3);
+            //         // // map to normalized device coordinate (NDC) space
+            //         // vector.project(sphereSelected);
+            //         // // map to 2D screen space
+            //         // vector.x = Math.round((vector.x + 1) * container.width / 2);
+            //         // vector.y = Math.round((-vector.y + 1) * container.height / 2);
+            //         // vector.z = 0;
+
+            //         sphereSelected.position.set(camera.position.x, camera.position.y, camera.position.z - 100)
+
+            //         // sphereSelected.geometry.boundingSphere.radius = sphereSelected.geometry.boundingSphere.radius * 4 
+            //     } else {
+
+
+            //     }
+            // }
+            // }
+        }
+
+        // Run game loop(update, render, repeat)
+        const gameLoop = function () {
+            // Call the gameloop at the next image
+            requestAnimationFrame(gameLoop);
+
+            update();
+
+            // Render scene with the camera
+            renderer.render(scene, camera);
+        }
+
+        load();
+        gameLoop();
+
+        function raycasting(e) {
+            // pointerLockControl.lock();
+
+            // console.log("ok")
+            if (e != undefined) {
+                mouse.x = event.clientX / window.innerWidth * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            }
+
+            // RAYCASTING
+            // find intersections
+            raycaster.setFromCamera(mouse, camera);
+            var intersects = raycaster.intersectObjects(spheresToRaycast, true);
+
+            // If there is an intersect by click
+            if (intersects.length > 0 && e) {
+                // If the current object intersected is not currently stored
+                if (INTERSECTED != intersects[0].object) {
+                    // Store reference to the closest object as current intersection object
+                    INTERSECTED = intersects[0].object;
+
+                    // Current sphere - Store our sphere for the gui
+                    sphereSelected = INTERSECTED;
+
+                    // Add the color to the gui 
+                    guiControls.color = sphereSelected.material.color.getStyle();
+
+                    // Add the sphere to the player
+                    sphereSelected.detached = true;
+
+                    spheresGet.push(sphereSelected);
+
+                    // Delete the sphere from all spheres to raycast
+                    for (let i = 0; i < spheresToRaycast.length; i++) {
+                        const element = spheresToRaycast[i];
+                        // If the sphere selected is from all spheresToRaycast
+                        if (INTERSECTED.uuid === element.uuid) {
+                            spheresToRaycast.splice(i, 1) //delete
+
+                            // element.geometry.dispose();
+                            // element.material.dispose();
+                            // scene.remove(element);
+                        }
+                    }
+                }
+            } else { // no intersections
+                // Stop Intersected
+                INTERSECTED = null;
+            }
+        }
+
+        function gui() {
+            // Dat.gui
+            // The link is done in the update function for each work
+            gui = new dat.GUI();
+            guiControls = new function () {
+                this.sphereNumber = 5;
+                this.sphereSize = 1;
+                this.sphereColor = 0xff0000;
+                this.sphereCaptured = 0x00ff00;
+                this.sphereRotation = false;
+            };
+
+            // Add param to the GUI
+            // Change the number of sphere generated
+            gui.add(guiControls, 'sphereNumber', 1, 10).name("Spheres Number").step(1).listen();
+
+            // Change the size of each sphere
+            gui.add(guiControls, 'sphereSize', 1, 5).name("Spheres Size").step(0.5);
+
+            // Change the color of each sphere
+            gui.addColor(guiControls, 'sphereColor').name("Spheres Color");
+
+            // Change the color of ours spheres
+            gui.addColor(guiControls, 'sphereCaptured').name("Spheres Captured");
+            // other way
+            // .onChange(function () { 
+            //     spheresGet.forEach(e =>
+            //         e.material.color.set(guiControls.sphereCaptured)
+            //     );
+            // });
+
+            // Rotation of each sphere we own
+            gui.add(guiControls, 'sphereRotation').name("Spheres Rotation");
+        }
+
+        // guiControls.sphereNumber
+        function meshSphere() {
+            const sphereTexture = loader.load('./textures/sphere2.png');
+
+            // for (let i = 0; i < 5; i++) {
+            // Create the sphere
+            sphere = new THREE.Mesh(
+                new THREE.SphereGeometry(15, 32, 32),
+                // new THREE.MeshBasicMaterial({
+                new THREE.MeshLambertMaterial({
+                    // map: sphereTexture,
+                    // side: THREE.FrontSide,
+                    // wireframe: true,
+                    color: guiControls.sphereColor
+                })
+            );
+            // let posX = Math.random() * (meshFloor.material.map.wrapS - meshFloor.material.map.wrapS /2 ) - meshFloor.material.map.wrapS / 2 ;
+            let floorNoDecimal = Math.floor(meshFloor.material.map.wrapS)
+            let posX = Math.random() * (-floorNoDecimal) + floorNoDecimal / 2;
+            let posZ = Math.random() * (-floorNoDecimal) + floorNoDecimal / 2;
+            let posY = meshFloor.position.y + 75;
+
+            sphere.position.set(posX, posY, posZ);
+            // sphere.position.set(-500, 75, -500);
+            sphere.angle = 100;
+            sphere.velocity = 1;
+
+            // Light
+            sphere.light = new THREE.PointLight(0xff0000, 1, 100);
+            sphere.light.position.set(sphere.position.x, sphere.position.y - 40, sphere.position.z);
+            scene.add(sphere.light);
+
+            // add each spheres to the scene
+            scene.add(sphere);
+
+            // add each sphere in the array to raycast (not allow the ground to be raycasted)
+            spheresToRaycast.push(sphere);
+            console.log(sphere.position.x)
+        }
+
+        function meshBox() {
+            const length = 100;
+            cube = new THREE.Mesh(
+                new THREE.BoxGeometry(length, length, length),
+                new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    wireframe: true
+                })
+            );
+
+            // offsetX = Math.random(meshFloor.position.x - length/2, )
+            // offsetX = Math.random(-500, meshFloor.geometry.parameters.width - length * 1.5)
+            offsetX = Math.floor(Math.random() * meshFloor.geometry.parameters.width - length * 1.5)
+            cube.position.set(0, 0, -100);
+            meshFloor.add(cube);
+        }
+
+        function meshComplexBoxes() {
+            const cubeMaterialArray = [];
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0xff3333
+            }));
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0xff8800
+            }));
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0xffff33
+            }));
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0x33ff33
+            }));
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0x3333ff
+            }));
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                color: 0x8833ff
+            }));
+            var cubeMaterials = new THREE.MeshFaceMaterial(cubeMaterialArray);
+            var cubeGeometry = new THREE.CubeGeometry(100, 100, 100, 1, 1, 1);
+            cubeComplexe = new THREE.Mesh(cubeGeometry, cubeMaterials);
+            cubeComplexe.position.set(-100, 50, -50);
+            scene.add(cubeComplexe);
+        }
+
+        function meshBoxes() {
+            cubes = [];
+            for (let i = 0; i < 100; i++) {
+                // geo = new THREE.BoxGeometry(Math.random() * 100, Math.random() * 100, Math.random() * 100)
+                geo = new THREE.BoxGeometry(Math.random() * 100, Math.random() * 100, Math.random() * 100)
+                mat = new THREE.MeshBasicMaterial({
+                    wireframe: true
+                })
+                switch (i % 3) {
+                    case 0:
+                        mat.color = new THREE.Color(0xff0000)
+                        break;
+                    case 1:
+                        mat.color = new THREE.Color(0xffff00)
+                        break;
+                    case 2:
+                        mat.color = new THREE.Color(0x0000ff)
+                        break;
+                }
+                const cube = new THREE.Mesh(geo, mat)
+                cubes.push(cube)
+            }
+            cubes.forEach((c) => {
+                c.position.x = (Math.random() * 1000) - 500
+                c.position.z = (Math.random() * 1000) - 500
+                c.geometry.computeBoundingBox()
+                c.position.y = (c.geometry.boundingBox.max.y - c.geometry.boundingBox.min.y) / 2
+                scene.add(c)
+            });
+        }
+
+        function meshFloor() {
+            const meshFloorTexture = loader.load('./textures/floor.jpg');
+            // meshFloorTexture.wrapS = meshFloorTexture.wrapT = THREE.RepeatWrapping;
+            // meshFloorTexture.repeat.set(1, 1);
+            const floorSize = 1000;
+            meshFloor = new THREE.Mesh(
+                new THREE.PlaneGeometry(floorSize, floorSize, 10, 10), // x, y ,nb segmentsX
+                new THREE.MeshBasicMaterial({
+                    map: meshFloorTexture,
+                    // color: 0x000000,
+                    // wireframe: true,
+                    side: THREE.DoubleSide
+                })
+            );
+            meshFloor.rotation.x = Math.PI / 2;
+            scene.add(meshFloor);
+        }
+
+        function meshSky() {
+            // Sky
+            var skyBoxGeometry = new THREE.CubeGeometry(FAR - 10, FAR - 10, FAR - 10);
+            var skyBoxMaterial = new THREE.MeshBasicMaterial({
+                color: 0x9966ff,
+                side: THREE.BackSide
+            });
+            var skyBox = new THREE.Mesh(skyBoxGeometry, skyBoxMaterial);
+            scene.add(skyBox);
+        }
+
+        function addLights() {
+            // Lights
+            const lightEnvironment = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
+            lightEnvironment.color.setHSL(0.6, 1, 0.6);
+            lightEnvironment.groundColor.setHSL(0.095, 1, 0.75);
+            lightEnvironment.position.set(0, 200, 0);
+            lightEnvironment.shadowDarkness = 1;
+            lightEnvironment.shadowCameraVisible = true;
+
+            scene.add(lightEnvironment);
+
+            const hemiLightHelper = new THREE.HemisphereLightHelper(lightEnvironment, 10);
+            scene.add(hemiLightHelper);
+
+            // const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            // dirLight.color.setHSL(0.1, 1, 0.95);
+            // dirLight.position.set(-10,5, 1);
+            // dirLight.position.multiplyScalar(30);
+            // scene.add(dirLight);
+
+            // dirLight.castShadow = true;
+
+            // dirLight.shadow.mapSize.width = SCREEN_WIDTH;
+            // dirLight.shadow.mapSize.height = SCREEN_HEIGHT;
+
+            // var d = 50;
+            // dirLight.shadow.camera.left = -d;
+            // dirLight.shadow.camera.right = d;
+            // dirLight.shadow.camera.top = d;
+            // dirLight.shadow.camera.bottom = -d;
+
+            // dirLight.shadow.camera.far = 3500;
+            // dirLight.shadow.bias = -0.0001;
+
+            // dirLightHeper = new THREE.DirectionalLightHelper(dirLight, 10);
+            // scene.add(dirLightHeper);
+
+            // Point de lumière
+            // const pointLight = new THREE.PointLight(0xFFFFFF);
+            // pointLight.position.x = 10;
+            // pointLight.position.y = 50;
+            // pointLight.position.z = 130;
+            // scene.add(pointLight);
+
+            // Lumière ambiante
+            // const ambientLight = new THREE.AmbientLight(0xcccccc, 0.4);
+            // scene.add(ambientLight);
+
+            // Lumière directionnelle
+            // const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            // directionalLight.position.set(1, -1, 0).normalize();
+            // scene.add(directionalLight);
+
+            // collada
+            // const loadingManager = new THREE.LoadingManager(function () {});
+            // const colladaLoader = new THREE.ColladaLoader(loadingManager);
+            // colladaLoader.load('./models/pion/model.dae', function (collada) {});
+
+        }
+
+        function onDocumentMouseMove(event) {
+            event.preventDefault();
+
+            // sets the mouse position with a coordinate system where the center of the screen is the origin
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+    </script>
+</body>
+
+</html>
