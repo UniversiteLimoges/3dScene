@@ -54,7 +54,7 @@
         let spheresGet = [];
         let sphereSelected;
 
-        const load = function() {
+        const load = function () {
             // Scene - Create a scene
             scene = new THREE.Scene();
             // Background and Fog
@@ -83,12 +83,12 @@
             // Scene parameters
             camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
             camera.cameraHeight = scene.position.y + 75;
-            camera.position.set(scene.position.x - 1000, camera.cameraHeight, scene.position.z - 1000)
-                // camera.velocity = 2;
-                // camera.canJump = true;
-                // camera.jumpHeight = 75;
-                // camera.gravity = .7;
-                // camera.position.add( camera.direction.multiplyScalar(camera.distance) );
+            camera.position.set(scene.position.x - 1000, camera.cameraHeight, scene.position.z -1000)
+            // camera.velocity = 2;
+            // camera.canJump = true;
+            // camera.jumpHeight = 75;
+            // camera.gravity = .7;
+            // camera.position.add( camera.direction.multiplyScalar(camera.distance) );
             camera.lookAt(0, 50, 0);
             scene.add(camera);
 
@@ -101,9 +101,8 @@
             // Add the raycasting function to the renderer
             renderer.domElement.addEventListener("click", raycasting);
 
-            // Menu - when we press
-            var instructions;
-            //var instructions = document.getElementById('instructions');
+            // Menu - when we press 
+            // var instructions = document.getElementById('instructions');
             // container.addEventListener('click', (e) => {
             //     container.requestFullscreen();
             // });
@@ -122,7 +121,7 @@
             // });
 
             // When keyoboard is pressed
-            var onKeyDown = function(event) {
+            var onKeyDown = function (event) {
                 switch (event.keyCode) {
                     case 65: // lock the screen, escape to exit
                         pointerLockControl.lock();
@@ -148,8 +147,8 @@
                     case 32: // space
                         if (camera.canJump === true) {
                             console.log("ok")
-                                // cube.velocity.y += 350;
-                                // cube.position.y += 5;
+                            // cube.velocity.y += 350;
+                            // cube.position.y += 5;
                         }
                         camera.canJump = false;
                         break;
@@ -160,7 +159,7 @@
 
             };
             // When keyoboard is realeased
-            var onKeyUp = function(event) {
+            var onKeyUp = function (event) {
                 switch (event.keyCode) {
                     case 38: // up
                     case 90: // z
@@ -204,7 +203,7 @@
             container.appendChild(stats.domElement);
 
             // Resize the renderer and the camera if we resize the window
-            window.addEventListener('resize', function() {
+            window.addEventListener('resize', function () {
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -212,7 +211,7 @@
         }
 
         // Game Logic
-        let update = function() {
+        let update = function () {
             let radiusCameraX = 100;
             let radiusCameraZ = 100;
             let offsetCameraY = 20;
@@ -322,7 +321,7 @@
                 }
                 // Victory
             } else {
-                window.location.href = './endGame.html';
+                window.location.href = "./endGame.html";
             }
 
             // Sphere selected for the player
@@ -349,7 +348,7 @@
         }
 
         // Run game loop(update, render, repeat)
-        const gameLoop = function() {
+        const gameLoop = function () {
             // Call the gameloop at the next image
             requestAnimationFrame(gameLoop);
 
@@ -417,7 +416,7 @@
             // Dat.gui
             // The link is done in the update function for each work
             gui = new dat.GUI();
-            guiControls = new function() {
+            guiControls = new function () {
                 this.sphereNumber = 5;
                 this.sphereSize = 1;
                 this.sphereColor = 0xff0000;
@@ -569,10 +568,10 @@
             // meshFloorTexture.repeat.set(1, 1);
             const floorSize = 1000;
             meshFloor = new THREE.Mesh(
-                new THREE.PlaneGeometry(floorSize, floorSize, 10, 10), // x, y ,nb segmentsX
+                new THREE.PlaneGeometry(floorSize, floorSize, 100, 100), // x, y ,nb segmentsX
                 new THREE.MeshBasicMaterial({
                     map: meshFloorTexture,
-                    // color: 0x000000,
+                    // color: 0xffffff,
                     // wireframe: true,
                     side: THREE.DoubleSide
                 })
@@ -603,8 +602,8 @@
 
             scene.add(lightEnvironment);
 
-            const hemiLightHelper = new THREE.HemisphereLightHelper(lightEnvironment, 10);
-            scene.add(hemiLightHelper);
+            // const hemiLightHelper = new THREE.HemisphereLightHelper(lightEnvironment, 10);
+            // scene.add(hemiLightHelper);
 
             // const dirLight = new THREE.DirectionalLight(0xffffff, 1);
             // dirLight.color.setHSL(0.1, 1, 0.95);
